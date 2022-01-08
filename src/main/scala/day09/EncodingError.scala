@@ -1,12 +1,17 @@
 package day09
 
-import utils.{InputLoader, ListUtils}
+import utils.{AOCExecutor, InputLoader, ListUtils}
 
 /**
  * @author Alexandre Masselot
  * @Copyright L'Occitane 2021
  */
-object EncodingError {
+object EncodingError extends AOCExecutor {
+  val numbers = InputLoader.read("09", false).map {
+    _.toLong
+  }
+  val window = 25
+
   def findSum(win: List[Long], n: Long): Option[(Long, Long)] = {
     ListUtils.combinationWithoutRepetitions(win, 2)
       .find(_.sum == n)
@@ -24,12 +29,12 @@ object EncodingError {
       .head
   }
 
-  def part1(numbers: List[Long], window: Int) = {
+  def part1() = {
     val xs = missSum(numbers, window)
     println(xs)
   }
 
-  def part2(numbers: List[Long], window: Int) = {
+  def part2() = {
     val target = missSum(numbers, window)
 
     def findSummingRange(remain: List[Long], acc: List[Long], accTot: Long): List[Long] = {
@@ -39,7 +44,7 @@ object EncodingError {
       if (accTot > target) {
         return findSummingRange(remain, acc.drop(1), accTot - acc.head)
       }
-      return findSummingRange(remain.drop(1), acc :+ remain.head, accTot + remain.head)
+       findSummingRange(remain.drop(1), acc :+ remain.head, accTot + remain.head)
     }
 
     val sumList = findSummingRange(numbers, List(), 0)
@@ -47,11 +52,6 @@ object EncodingError {
   }
 
   def main(args: Array[String]) = {
-    val input = InputLoader.read("09", false).map {
-      _.toLong
-    }
-
-    part1(input, 25)
-    part2(input, 25)
+    execute
   }
 }
