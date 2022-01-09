@@ -11,20 +11,20 @@ import scala.collection.immutable.BitSet
  */
 object ConwayCubes extends AOCExecutor {
 
-  val input = InputLoader.read("17", true)
-  val cube = Cube.parse2D(input)
+  val input = InputLoader.read("17", false)
 
   def part1(): Unit = {
-    val endCube = (1 until 7).foldLeft(cube) { case (acc, _) =>
-      val c = acc.grow.conway
-      println(c)
-      c
-    }
-    println(endCube.bitSet.count{_ => true})
+    val universe = CubeUniverse.parse2D(input, 3)
+
+    val target = (1 to 6).foldLeft(universe) { case (acc, _) => acc.conway }
+    println(target.size)
   }
 
   def part2(): Unit = {
+    val universe = CubeUniverse.parse2D(input, 4)
 
+    val target = (1 to 6).foldLeft(universe) { case (acc, _) => acc.conway }
+    println(target.size)
   }
 
   def main(args: Array[String]) = {
@@ -32,186 +32,68 @@ object ConwayCubes extends AOCExecutor {
   }
 }
 
-case class Cube(val xSize: Int, val ySize: Int, val zSize: Int, val bitSet: BitSet) {
-  def +(x: Int, y: Int, z: Int) = Cube(xSize, ySize, zSize, bitSet + (x + y * xSize + z * xSize * ySize))
 
-  /*  ..#.
-      .#.#
-      .#..
+case class Cube(coordinates: List[Int]) {
+  val dim = coordinates.size
 
-      ####
-      ..#.
-      #..#
+  def propagate = {
+    def handler(d: Int, acc: List[Cube]): List[Cube] = {
+      if (d == dim) {
+        return acc
+      }
+      handler(
+        d + 1,
+        (-1 to 1).flatMap { i =>
+          acc.map { c =>
+            c.copy(coordinates = (c.coordinates.take(d) :+ (c.coordinates(d) + i)) ++ coordinates.drop(d + 1))
+          }
+        }.toList
+      )
+    }
 
-      => 2,5,7,9,12,13,14,15,18,20,23
-   */
+    handler(0, List(this)).filter {
+      _ != this
+    }
+  }
+}
+
+case class CubeUniverse(
+                         val cubes: List[Cube]
+                       ) {
+  def size = cubes.size
 
   def conway = {
-    val neighb = neighbors.flatMap { c => c.bitSet.toList }.groupBy(identity).view.mapValues(_.size).toList
-    copy(
-      bitSet = bitSet ++
-        neighb.filter { case (_, count) => count == 3 }.map {
-          _._1
-        } --
-        neighb.filter { case (_, count) => count > 3 | count < 2 }.map {
-          _._1
-        }
+    val countCubes = cubes.flatMap {
+      _.propagate
+    }
+      .groupBy(identity)
+      .map { case (c, cs) => c -> cs.size }
+      .toMap
+
+    CubeUniverse(
+      (cubes.filter { c =>
+        val n = countCubes.getOrElse(c, 0)
+        n >= 2 & n <= 3
+      } ::: countCubes.filter {
+        _._2 == 3
+      }.map {
+        _._1
+      }.toList).distinct
     )
-
   }
-
-  def xRight = copy(
-    bitSet = bitSet.filter {
-      _ % xSize != 0
-    }.map {
-      _ - 1
-    }
-  )
-
-  def xLeft = copy(
-    bitSet = bitSet.filter { v =>
-      v % xSize != (xSize - 1)
-    }.map {
-      _ + 1
-    }
-  )
-
-  def yRight = copy(
-    bitSet = bitSet.filter { v =>
-      (v / xSize) % ySize != 0
-    }.map {
-      _ - xSize
-    }
-  )
-
-  def yLeft = copy(
-    bitSet = bitSet.filter { v =>
-      (v / xSize) % ySize != (ySize - 1)
-    }.map {
-      _ + xSize
-    }
-  )
-
-  def zRight = copy(
-    bitSet = bitSet.filter { v =>
-      (v / (xSize * ySize)) % zSize != 0
-    }.map {
-      _ - (xSize * ySize)
-    }
-  )
-
-  def zLeft = copy(
-    bitSet = bitSet.filter { v =>
-      (v / (xSize * ySize)) % zSize != (zSize - 1)
-    }.map {
-      _ + (xSize * ySize)
-    }
-  )
-
-  def position(v: Int) = (
-    v % xSize,
-    (v / xSize) % ySize,
-    v / (xSize * ySize)
-  )
-
-  def bit(x: Int, y: Int, z: Int) =
-    x + y * xSize + z * xSize * ySize
-
-  def grow = growX.growY.growZ
-
-  def growX = copy(
-    xSize = xSize + 2,
-    bitSet = bitSet.map { v =>
-      val (x, y, z) = position(v)
-      x + 1 + y * (xSize + 2) + z * (xSize + 2) * ySize
-    }
-  )
-
-  def growY = copy(
-    ySize = ySize + 2,
-    bitSet = bitSet.map { v =>
-      val (x, y, z) = position(v)
-      x + (y + 1) * xSize + z * xSize * (ySize + 2)
-    }
-  )
-
-  def growZ = copy(
-    zSize = zSize + 2,
-    bitSet = bitSet.map {
-      _ + xSize * ySize
-    }
-  )
-
-  def neighbors: List[Cube] =
-    List(
-      xLeft,
-      xRight,
-      yLeft,
-      yRight,
-      zLeft,
-      zRight,
-      xLeft.yLeft,
-      xLeft.yRight,
-      xRight.yLeft,
-      xRight.yRight,
-      xLeft.zLeft,
-      xLeft.zRight,
-      xRight.zLeft,
-      xRight.zRight,
-      yLeft.zLeft,
-      yLeft.zRight,
-      yRight.zLeft,
-      yRight.zRight,
-      xLeft.yLeft.zLeft,
-      xLeft.yLeft.zRight,
-      xLeft.yRight.zLeft,
-      xLeft.yRight.zRight,
-      xRight.yLeft.zLeft,
-      xRight.yLeft.zRight,
-      xRight.yRight.zLeft,
-      xRight.yRight.zRight,
-    )
-
-  override def toString: String = {
-    val bm = bitSet.toBitMask
-    val bmStr = bm.map { l =>
-      val s = l.toBinaryString
-      "0".repeat(64 - s.size) + s
-    }.reverse.mkString("").takeRight(xSize * ySize * zSize)
-      .replaceAll("0", ".")
-      .replaceAll("1", "#")
-      .reverse
-      .sliding(xSize * ySize, xSize * ySize)
-      .map { b => b.sliding(xSize, xSize).mkString("\n") }
-      .mkString("\n\n")
-
-    bmStr
-  }
-
 }
 
 
-object Cube {
-  def parse2D(input: Seq[String]) = {
-    val ySize = input.size
-    val xSize = input.head.size
-    Cube(
-      xSize,
-      ySize,
-      1,
-      BitSet() ++
-        input.mkString("").zipWithIndex.filter {
-          _._1 == '#'
-        }.map {
-          _._2
-        }
+object CubeUniverse {
+  def parse2D(input: Seq[String], dim: Int) = {
+    CubeUniverse(
+      input.zipWithIndex
+        .flatMap { case (line, y) =>
+          line.zipWithIndex.filter { case (c, _) => c == '#' }
+            .map { case (_, x) => Cube(List(x, y) ++ List.fill(dim - 2)(0)) }
+        }.toList
     )
   }
 
 
-  def build(xSize: Int, ySize: Int, zSize: Int, set: List[(Int, Int, Int)]): Cube = {
-    set.foldLeft(Cube(xSize, ySize, zSize, BitSet())) { case (acc, t) =>
-      acc.copy(bitSet = acc.bitSet + (t._1 + t._2 * xSize + t._3 * xSize * ySize))
-    }
-  }
 }
