@@ -1,7 +1,8 @@
 package utils
 
 import org.specs2.mutable.Specification
-import utils.Direction.{LEFT, RIGHT, UP, DOWN}
+import utils.Direction.{DOWN, LEFT, RIGHT, UP}
+import utils.TransformationUnit.{ROTATION, VERTICAL_SYMMETRY}
 
 /**
  * @author Alexandre Masselot
@@ -59,9 +60,28 @@ class MatrixTest extends Specification {
 
       got must equalTo(expected)
     }
-
-
   }
+  "transform" should {
+    "VERTICAL_SYMMETRY" in {
+      val got = matrix.transformUnit(VERTICAL_SYMMETRY)
+      val expected = Matrix.build(List(List(100, 200, 300), List(10, 20, 30), List(1, 2, 3)))
+
+      got must equalTo(expected)
+    }
+    "ROTATION" in {
+      val got = matrix.transformUnit(ROTATION)
+      val expected = Matrix.build(List(List(3, 30, 300), List(2, 20, 200), List(1, 10, 100)))
+
+      got must equalTo(expected)
+    }
+    "ROTATION,ROTATION" in {
+      val got = matrix.transform(List(ROTATION, ROTATION))
+      val expected = Matrix.build(List(List(300, 200, 100), List(30, 20, 10), List(3, 2, 1)))
+
+      got must equalTo(expected)
+    }
+  }
+
   "scan" should {
     "left" in {
       val got = matrix.scan(LEFT, 0) { case (acc, i) => acc + i }

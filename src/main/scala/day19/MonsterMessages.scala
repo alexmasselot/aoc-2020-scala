@@ -3,14 +3,11 @@ package day19
 import scalaz.Memo
 import utils.{AOCExecutor, InputLoader}
 
-import scala.annotation.tailrec
 
 abstract class CheckNode {
 
-  def isValidExplicit(str: String): Boolean
-
   val isValid: String => Boolean = Memo.immutableHashMapMemo {
-    str => isValidExplicit(str)
+    str => toRegexp.r.matches(str)
   }
 
   def toRegexp: String
@@ -20,7 +17,6 @@ abstract class CheckNode {
 case class CheckNodeValue(
                            val value: Char
                          ) extends CheckNode {
-  def isValidExplicit(str: String): Boolean = str.size == 1 & str.head == value
 
   def toRegexp: String = s"$value"
 }
@@ -30,20 +26,7 @@ case class CheckNodePair(
                           val checkerA: CheckNode,
                           val checkerB: CheckNode
                         ) extends CheckNode {
-  def isValidExplicit(str: String): Boolean = {
-    @tailrec
-    def handler(part1: String, part2: String): Boolean = {
-      if (part2.isEmpty) {
-        return false
-      }
-      if (checkerA.isValid(part1) & checkerB.isValid(part2)) {
-        return true
-      }
-      handler(part1 + part2.head, part2.drop(1))
-    }
 
-    handler(str.take(1), str.drop(1))
-  }
 
   def toRegexp: String = s"${checkerA.toRegexp}${checkerB.toRegexp}"
 }
@@ -62,7 +45,6 @@ case class CheckNodeOr(
                         val checkerA: CheckNode,
                         val checkerB: CheckNode,
                       ) extends CheckNode {
-  def isValidExplicit(str: String): Boolean = checkerA.isValid(str) | checkerB.isValid(str)
 
   def toRegexp: String = s"(?:${checkerA.toRegexp}|${checkerB.toRegexp})"
 }
@@ -139,14 +121,12 @@ object CheckGraph {
 object MonsterMessages extends AOCExecutor {
 
   val input = InputLoader.read("19", false)
+  val graph = CheckGraph.parse(input.takeWhile(_ != ""))
   val messages = input.dropWhile(_ != "").drop(1)
 
 
   def part1(): Unit = {
-    val graph = CheckGraph.parse(input.takeWhile(_ != ""))
-
     val re = graph(0).toRegexp.r
-
     val n = messages.count { message =>
       val ok = re.matches(message)
       if (ok) println(message)
@@ -156,20 +136,13 @@ object MonsterMessages extends AOCExecutor {
   }
 
   def part2(): Unit = {
-    val reSkip = raw"""(0|8|11):.*""".r
-    val graph = CheckGraph.parse(
-      input.takeWhile(_ != "")
-        .filter { l =>
-          l match {
-            case reSkip(_) => false
-            case _ => true
-          }
-        }
-    )
-    val re = s"${graph(42).toRegexp}{2,}${graph(31).toRegexp}{1,}".r
+    val res = (0 until 20).map { i => s"${graph(42).toRegexp}{${2 + i},}${graph(31).toRegexp}{1,${1 + i}}".r }
+
 
     val n = messages.count { message =>
-      val ok = re.matches(message)
+      val ok = res.exists {
+        _.matches(message)
+      }
       if (ok) println(message)
       ok
     }

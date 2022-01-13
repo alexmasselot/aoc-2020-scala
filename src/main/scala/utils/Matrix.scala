@@ -1,6 +1,7 @@
 package utils
 
 import utils.Direction.{DOWN, Direction, LEFT, RIGHT, UP}
+import utils.TransformationUnit.{ROTATION, TransformationUnit, VERTICAL_SYMMETRY}
 
 import scala.+:
 
@@ -8,6 +9,13 @@ object Direction extends Enumeration {
   type Direction = Value
   val LEFT, RIGHT, UP, DOWN = Value
 }
+
+object TransformationUnit extends Enumeration {
+  type TransformationUnit = Value
+  val VERTICAL_SYMMETRY, ROTATION = Value
+}
+
+case class Transformation(units: List[TransformationUnit])
 
 /**
  * @author Alexandre Masselot
@@ -21,6 +29,28 @@ case class Matrix[T](
   }
   val nRows = values.length
   val nCols = if (nRows == 0) 0 else values(0).length
+
+  def row(i: Int) = if (i >= 0)
+    values(i)
+  else
+    values(nRows + i)
+
+  def col(i: Int) = if (i >= 0)
+    values.map { row =>
+      row(i)
+    }
+  else
+    values.map { row =>
+      row(nCols + i)
+    }
+
+  def set(i: Int, j: Int, x: T) = {
+    val targetRow = values(i)
+    val modifiedRow = targetRow.take(j) :+ x :++ targetRow.drop(j + 1)
+    Matrix(
+      values.take(i) :+ modifiedRow :++ values.drop(i + 1)
+    )
+  }
 
   def apply(row: Int, col: Int): T = values(row)(col)
 
@@ -93,6 +123,26 @@ case class Matrix[T](
       acc.zip(row).map { case (x, y) => op(x, y) }
     }.toIndexedSeq
   }
+
+  def transformUnit(transformationUnit: TransformationUnit) = transformationUnit match {
+    case VERTICAL_SYMMETRY => Matrix(values.reverse)
+    case ROTATION => {
+      def handler(remain: IndexedSeq[IndexedSeq[T]]): IndexedSeq[IndexedSeq[T]] = {
+        val newRow = IndexedSeq(remain.map {
+          _.head
+        })
+        if (remain.head.size == 1) return newRow
+        handler(remain.map {
+          _.tail
+        }) :++ newRow
+      }
+
+      Matrix(handler(values))
+    }
+  }
+
+  def transform(units: Seq[TransformationUnit]) =
+    units.foldLeft(this) { case (acc, u) => acc.transformUnit(u) }
 
   def scan[S](from: Direction, init: S)(op: (S, T) => S) = from match {
     case LEFT => Matrix(
@@ -167,6 +217,9 @@ case class Matrix[T](
     case UP => Matrix(values.drop(n))
     case DOWN => Matrix(values.dropRight(n))
   }
+  def shrink()= Matrix(
+    values.drop(1).dropRight(1).map{row => row.drop(1).dropRight(1)}
+  )
 
   def take(from: Direction) = from match {
     case LEFT => values.map {
