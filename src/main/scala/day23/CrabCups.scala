@@ -9,36 +9,37 @@ import utils.{AOCExecutor, InputLoader}
  */
 object CrabCups extends AOCExecutor {
 
-  val startRing = Ring(InputLoader.read("23", true).head.toList.map {
+  val numbers = InputLoader.read("23", false).head.toList.map {
     _.toString.toInt
-  })
+  }
 
   def part1(): Unit = {
-    val nPlay = 100
-    val (last, _) = (1 to nPlay).foldLeft((startRing, startRing.head)) { case ((r, at), _) =>
-      val nextRing = r.play1(3, at)
-      (nextRing, nextRing.nextValue(at))
+    val ring = Ring.build(numbers)
+    val nPlay = 10
+    (1 to nPlay).foldLeft(numbers.head) { case (at, _) =>
+      val next = ring.play(at)
+      next
     }
-    val i = last.indexOf(1)
-    println((last.values.drop(i + 1) ++ last.values.take(i)).mkString(""))
+
+    println(ring.values(1).drop(1).mkString(""))
+
   }
 
   def part2(): Unit = {
-    val nPlay = 50
+    val nPlay = 10000000//10000000
+    val max = 1000000
 
-    val startRing1M = Ring(startRing.values ++ ((startRing.values.max + 1) to 50).toList)
-    val (last, _) = (1 to nPlay).foldLeft((startRing1M, startRing1M.head)) { case ((r, at), _) =>
-      val nextRing = r.play1(3, at)
-      println(s"${nextRing.nextValue(at)}/ $nextRing")
-//      val a = nextRing.nextValue(1)
-//      val b = nextRing.nextValue(a)
-//      println(a, b)
+    val ring = Ring.build(numbers ++ ((numbers.max + 1) to max).toList)
+    (1 to nPlay).foldLeft(numbers.head) { case (at, _) =>
+       ring.play(at)
+      //      val a = nextRing.nextValue(1)
+      //      val b = nextRing.nextValue(a)
+      //      println(a, b)
 
-      (nextRing, nextRing.nextValue(at))
     }
-    val a = last.nextValue(1)
-    val b = last.nextValue(a)
-    println(a, b)
+    val a = ring.next(1)
+    val b = ring.next(a)
+    println(a.toLong *  b)
   }
 
   def main(args: Array[String]) = {
