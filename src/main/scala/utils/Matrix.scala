@@ -217,8 +217,15 @@ case class Matrix[T](
     case UP => Matrix(values.drop(n))
     case DOWN => Matrix(values.dropRight(n))
   }
-  def shrink()= Matrix(
-    values.drop(1).dropRight(1).map{row => row.drop(1).dropRight(1)}
+
+  def shrink() = Matrix(
+    values.drop(1).dropRight(1).map { row => row.drop(1).dropRight(1) }
+  )
+
+  def grow(defaultValue: T) = Matrix(
+    values.prepended(IndexedSeq.fill(nCols)(defaultValue))
+      .appended(IndexedSeq.fill(nCols)(defaultValue))
+      .map { row => row.prepended(defaultValue).appended(defaultValue) }
   )
 
   def take(from: Direction) = from match {
